@@ -10,6 +10,7 @@ iris = load_iris()
 X = iris.data
 y = iris.target
 
+# spling the data
 X_train, X_test, y_train, y_test = train_test_split(
     X, y,
     test_size=0.2, # reserving 20% of the data for testing
@@ -23,8 +24,13 @@ pipeline = Pipeline(
 
 pipeline.fit(X_train, y_train)
 
+# model performance on seen data 
 train_score = pipeline.score(X_train, y_train)
+# model performance on unseen data 
 test_score = pipeline.score(X_test, y_test)
+
+print(f"Score(seen-data): {round(train_score*100, 2)}%")
+print(f"Score(unseen-data): {round(test_score*100, 2)}%")
 
 sample = [[5.1, 3.5, 1.4, 0.2]]  # A single new observation
 
