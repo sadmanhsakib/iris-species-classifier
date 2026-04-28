@@ -1,11 +1,11 @@
 import numpy as np
-from sklearn.model_selection import train_test_split
 from sklearn.datasets import load_iris
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import f1_score
+from sklearn.model_selection import cross_val_score
+import matplotlib.pyplot as plt
 
 iris = load_iris()
 
@@ -14,30 +14,21 @@ y = iris.target
 
 
 def main():
-    X_train, X_test, y_train, y_test = split_data()
+    lr_scores = logistic_classification()
+    rf_scores = random_forest_classification()
 
-    lr_f1, lr_train_score, lr_test_score = logistic_classification(X_train, X_test, y_train, y_test)
-    rf_f1, rf_train_score, rf_test_score = random_forest_classification(X_train, X_test, y_train, y_test)
+    print("Logistic Regression:")
+    print(f"  Fold scores: {lr_scores.round(4)}")
+    print(f"  Mean: {lr_scores.mean():.4f}  Std: {lr_scores.std():.4f}")
 
-    print(f"{lr_f1}, {rf_f1}")
-    print(f"{lr_test_score}, {rf_test_score}")
-    print(f"{lr_train_score}, {rf_train_score}")
-
-def split_data():
-    # spliting the data
-    X_train, X_test, y_train, y_test = train_test_split(
-        X,
-        y,
-        test_size=0.2,  # reserving 20% of the data for testing
-        random_state=42,  # seed for reproducibility
-        stratify=y,  # preserve class balance in both splits
-    )
-    return X_train, X_test, y_train, y_test
+    print("\nRandom Forest:")
+    print(f"  Fold scores: {rf_scores.round(4)}")
+    print(f"  Mean: {rf_scores.mean():.4f}  Std: {rf_scores.std():.4f}")
+    
+    visualize(lr_scores, rf_scores)
 
 
-def logistic_classification(
-    X_train: np.ndarray, X_test: np.ndarray, y_train: np.ndarray, y_test: np.ndarray
-) -> tuple[float, float, float]:
+def logistic_classification() -> np.ndarray:
     # LogisticRegression model (does classification)
     lr_pipeline = Pipeline(
         steps=[
@@ -45,25 +36,19 @@ def logistic_classification(
             ("model", LogisticRegression(max_iter=200)),
         ]
     )
-
-    # training the model with training data
-    lr_pipeline.fit(X_train, y_train)
-
-    # model performance on seen data
-    train_score = lr_pipeline.score(X_train, y_train)
-    # model performance on unseen data
-    test_score = lr_pipeline.score(X_test, y_test)
-    f1 = f1_score(y_test, lr_pipeline.predict(X_test), average="weighted")
-
-    f1 = round(f1*100, 2)
-    train_score = round(train_score*100, 2)
-    test_score = round(test_score*100, 2)
-
-    return f1, train_score, test_score
+    
+    # cross validating the scores for more reliable score
+    lr_scores = cross_val_score(
+        lr_pipeline,
+        X,
+        y,  # Full dataset — cross_val_score handles splitting internally
+        cv=5,  # Number of folds
+        scoring="accuracy",
+    )
+    return lr_scores
 
 
-def random_forest_classification(X_train: np.ndarray, X_test: np.ndarray, y_train: np.ndarray, y_test: np.ndarray
-) -> tuple[float, float, float]:
+def random_forest_classification() -> np.ndarray:
     # random forest pipeline
     rf_pipeline = Pipeline(
         steps=[
@@ -72,20 +57,32 @@ def random_forest_classification(X_train: np.ndarray, X_test: np.ndarray, y_trai
         ]
     )
 
-    # training the model with training data
-    rf_pipeline.fit(X_train, y_train)
+    rf_scores = cross_val_score(rf_pipeline, X, y, cv=5, scoring="accuracy")
+    return rf_scores
 
-    # model performance on seen data
-    train_score = rf_pipeline.score(X_train, y_train)
-    # model performance on unseen data
-    test_score = rf_pipeline.score(X_test, y_test)
-    f1 = f1_score(y_test, rf_pipeline.predict(X_test), average="weighted")
 
-    f1 = round(f1 * 100, 2)
-    train_score = round(train_score * 100, 2)
-    test_score = round(test_score * 100, 2)
+def visualize(lr_scores: np.ndarray, rf_scores: np.ndarrays):
+    labels = ["Logistic Regression", "Random Forest"]
+    means = [lr_scores.mean(), rf_scores.mean()]
+    stds = [lr_scores.std(), rf_scores.std()]
 
-    return f1, train_score, test_score
+    plt.figure(figsize=(7, 4))
+    bars = plt.bar(labels, means, yerr=stds, capsize=8, color=["steelblue", "forestgreen"])
+    plt.ylabel("Cross-validated Accuracy")
+    plt.title("Model Comparison — 5-Fold CV")
+    plt.ylim(0.9, 1.0)
 
+    for bar, mean in zip(bars, means):
+        plt.text(
+            bar.get_x() + bar.get_width() / 2,
+            mean + 0.002,
+            f"{mean:.4f}",
+            ha="center",
+            va="bottom",
+            fontsize=10,
+        )
+
+    plt.tight_layout()
+    plt.show()
 
 main()
