@@ -17,41 +17,14 @@ y = iris.target
 def main():
     X_train, X_test, y_train, y_test = split_data()
 
-    lr_pipeline = logistic_classification()
-    rf_pipeline = random_forest_classification()
-
+    pipeline = random_forest_classification()
+    
     # train both pipelines on X_train
-    lr_pipeline.fit(X_train, y_train)
-    rf_pipeline.fit(X_train, y_train)
+    pipeline.fit(X_train, y_train)
+    
+    get_classification_report(pipeline, X_test, y_test)
+    visualize_importance_by_features(pipeline)
 
-    # predictions on unseen data
-    lr_preds = lr_pipeline.predict(X_test)
-    rf_preds = rf_pipeline.predict(X_test)
-
-    """ classification report compares the ground truth labels against the predicted labels.
-        Breaks down the performance by class so that we can measure the imbalance.
-    """ 
-    print("Logistic Regression:")
-    print(classification_report(y_test, lr_preds, target_names=iris.target_names))
-
-    print("Random Forest:")
-    print(classification_report(y_test, rf_preds, target_names=iris.target_names))
-
-    rf_model = rf_pipeline.named_steps["model"]
-
-    importances = rf_model.feature_importances_
-    feature_names = iris.feature_names
-
-    # Sort by importance descending
-    indices = importances.argsort()[::-1]
-
-    plt.figure(figsize=(7, 4))
-    plt.bar(range(4), importances[indices], color="forestgreen")
-    plt.xticks(range(4), [feature_names[i] for i in indices], rotation=15)
-    plt.ylabel("Importance Score")
-    plt.title("Random Forest — Feature Importances")
-    plt.tight_layout()
-    plt.show()
 
 def split_data() -> tuple(np.ndarray):
     # spliting the data
@@ -101,6 +74,23 @@ def get_cross_val_score(pipeline: sklearn.pipeline.pipeline) -> np.ndarray:
     return scores
 
 
+def get_classification_report(
+    pipeline: sklearn.pipeline.pipeline,
+    X_test: np.ndarray,
+    y_test: np.ndarray,
+    model_name="",
+):
+    # predictions on unseen data
+    predictions = pipeline.predict(X_test)
+
+    """ classification report compares the ground truth labels against the predicted labels.
+        Breaks down the performance by class so that we can measure the imbalance.
+    """ 
+    print(f"Classification Report: {model_name}")
+    print(classification_report(y_test, predictions, target_names=iris.target_names))
+    plt.show()
+
+
 def visualize_cross_val_score(lr_scores: np.ndarray, rf_scores: np.ndarrays):
     labels = ["Logistic Regression", "Random Forest"]
     means = [lr_scores.mean(), rf_scores.mean()]
@@ -122,6 +112,24 @@ def visualize_cross_val_score(lr_scores: np.ndarray, rf_scores: np.ndarrays):
             fontsize=10,
         )
 
+    plt.tight_layout()
+
+
+# only for RandomForestClassification
+def visualize_importance_by_features(pipeline: sklearn.pipeline.pipeline):
+    model = pipeline.named_steps["model"]
+
+    importances = model.feature_importances_
+    feature_names = iris.feature_names
+
+    # Sort by importance descending
+    indices = importances.argsort()[::-1]
+
+    plt.figure(figsize=(7, 4))
+    plt.bar(range(4), importances[indices], color="forestgreen")
+    plt.xticks(range(4), [feature_names[i] for i in indices], rotation=15)
+    plt.ylabel("Importance Score")
+    plt.title("Random Forest — Feature Importances")
     plt.tight_layout()
     plt.show()
 
