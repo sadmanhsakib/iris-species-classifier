@@ -1,3 +1,4 @@
+import time
 import numpy as np
 from sklearn.datasets import load_iris
 from sklearn.pipeline import Pipeline
@@ -5,7 +6,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split, cross_val_score
-from sklearn.metrics import classification_report, confusion_matrix, ConfusionMatrixDisplay
+from sklearn.metrics import classification_report
 import matplotlib.pyplot as plt
 
 iris = load_iris()
@@ -18,13 +19,14 @@ def main():
     X_train, X_test, y_train, y_test = split_data()
 
     pipeline = random_forest_classification()
-    
-    # train both pipelines on X_train
+
+    # training the model
     pipeline.fit(X_train, y_train)
-    
+
+    scores = get_cross_val_score(pipeline)
+    print(scores)
     get_classification_report(pipeline, X_test, y_test)
     visualize_importance_by_features(pipeline)
-
 
 def split_data() -> tuple(np.ndarray):
     # spliting the data
@@ -133,4 +135,9 @@ def visualize_importance_by_features(pipeline: sklearn.pipeline.pipeline):
     plt.tight_layout()
     plt.show()
 
-main()
+
+if __name__ == "__main__":
+    start = time.time()
+    main()
+    end = time.time()
+    print(f"Run Time: {end-start}")
